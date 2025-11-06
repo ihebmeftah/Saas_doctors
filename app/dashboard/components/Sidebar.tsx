@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Menu,
   X,
+  Building2,
 } from "lucide-react";
 
 interface SidebarItem {
@@ -26,6 +27,11 @@ const sidebarItems: SidebarItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: <LayoutDashboard size={20} />,
+  },
+  {
+    label: "Clinics",
+    href: "/dashboard/clinics",
+    icon: <Building2 size={20} />,
   },
   {
     label: "Patients",
