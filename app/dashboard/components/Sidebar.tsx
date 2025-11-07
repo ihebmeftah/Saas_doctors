@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Building2,
+  Stethoscope,
 } from "lucide-react";
 
 interface SidebarItem {
@@ -32,6 +33,11 @@ const sidebarItems: SidebarItem[] = [
     label: "Clinics",
     href: "/dashboard/clinics",
     icon: <Building2 size={20} />,
+  },
+  {
+    label: "Staff",
+    href: "/dashboard/staff",
+    icon: <Stethoscope size={20} />,
   },
   {
     label: "Patients",

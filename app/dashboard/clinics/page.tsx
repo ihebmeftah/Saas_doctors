@@ -1,4 +1,4 @@
-import ClinicsList from "../components/ClinicsList";
+import ClinicsList from "./ClinicsList";
 
 export const metadata = {
   title: "Clinics | MedClinic Admin",

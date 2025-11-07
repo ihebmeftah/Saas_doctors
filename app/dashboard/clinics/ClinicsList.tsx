@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { MapPin, Phone, Mail, Users, Edit2, Trash2, Plus } from "lucide-react";
-import CreateClinicModal, { ClinicFormData } from "./CreateClinicModal";
+import CreateClinicModal, {
+  ClinicFormData,
+} from "./CreateClinicModal";
 
 interface Clinic {
   id: string;
