@@ -2,6 +2,8 @@ import { TimeStamEntity } from 'src/database/timestamp-entity';
 import { Patient } from 'src/users/entities/patient.entity';
 import { Clinique } from 'src/clinique/entities/clinique.entity';
 import { Column, Entity, ManyToOne, OneToMany, OneToOne, JoinColumn, PrimaryGeneratedColumn } from 'typeorm';
+import { Rdv } from 'src/rdv/entities/rdv.entity';
+import { Payment } from 'src/payment/entities/payment.entity';
 
 export enum FacturationStatus {
     DRAFT = 'draft',
@@ -47,12 +49,12 @@ export class Facturation extends TimeStamEntity {
     @Column({ type: 'text', nullable: true })
     description: string;
 
-    @OneToOne('Rdv', 'facturation', { nullable: true })
+    @OneToOne(() => Rdv, (rdv) => rdv.facturation, { nullable: true })
     @JoinColumn()
-    rdv: any;
+    rdv: Rdv;
 
-    @OneToMany('Payment', 'facturation', { cascade: true })
-    payments: any[];
+    @OneToMany(() => Payment, (payment) => payment.facturation, { cascade: true })
+    payments: Payment[];
 
     // Computed field
     get remainingAmount(): number {

@@ -1,5 +1,6 @@
 import { Clinique } from "src/clinique/entities/clinique.entity";
 import { TimeStamEntity } from "src/database/timestamp-entity";
+import { Facturation } from "src/facturation/entities/facturation.entity";
 import { Doctor } from "src/users/entities/doctor.entity";
 import { Patient } from "src/users/entities/patient.entity";
 import { Receptionist } from "src/users/entities/receptioniste.entity";
@@ -51,6 +52,6 @@ export class Rdv extends TimeStamEntity {
     status: rdvStatus;
     @Column({ type: 'json', nullable: true })
     consultation: Consultation;
-    @OneToOne('Facturation', 'rdv', { nullable: true })
-    facturation: any;
+    @OneToOne(() => Facturation, (facturation) => facturation.rdv, { nullable: true })
+    facturation: Facturation;
 }
