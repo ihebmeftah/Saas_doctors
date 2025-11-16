@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.env
+*.log
+.vscode
+
+# Ignore build artifacts
+build
+
+# Ignore lockfiles (optional)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
