@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
 import { userRole } from 'src/users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -23,8 +24,7 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email);
-    // const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
-    const isPasswordValid = loginDto.password === user?.password;
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
     if (!isPasswordValid || !user) {
       throw new UnauthorizedException('Invalid credentials');
     }

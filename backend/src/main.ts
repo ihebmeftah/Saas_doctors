@@ -7,8 +7,10 @@ async function bootstrap() {
 
   // Activer CORS
   app.enableCors({
-    origin: 'http://localhost:3000', // URL de votre frontend
+    origin: ['http://localhost:8080', 'http://localhost:3000'], // URL de votre frontend
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Activer la validation globale
@@ -17,7 +19,8 @@ async function bootstrap() {
     transform: true,
   }));
 
-  await app.listen(3001);
-  console.log('🚀 Backend démarré sur http://localhost:3001');
+  const port = 3000;
+  await app.listen(port);
+  console.log(`🚀 Backend démarré sur http://localhost:${port}`);
 }
 bootstrap();
