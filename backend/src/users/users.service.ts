@@ -11,6 +11,7 @@ import { Patient } from './entities/patient.entity';
 import { Admin } from './entities/admin.entity';
 import { Receptionist } from './entities/receptioniste.entity';
 import { userRole } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
   constructor(
@@ -47,6 +48,7 @@ export class UsersService {
         'User with this email or phone number already exists',
       );
     }
+    userDto.password = await bcrypt.hash('Doctor@123', 10)
     const createdUser = this.recepRepo.create({
       ...userDto,
       role: userRole.RECEP,
@@ -65,6 +67,7 @@ export class UsersService {
         'User with this email or phone number already exists',
       );
     }
+    userDto.password = await bcrypt.hash('Doctor@123', 10)
     const createdUser = this.patientRepo.create({
       ...userDto,
       role: userRole.PATIENT,
@@ -83,6 +86,7 @@ export class UsersService {
         'User with this email or phone number already exists',
       );
     }
+    userDto.password = await bcrypt.hash('Doctor@123', 10)
     const createdUser = this.adminRepo.create({
       ...userDto,
       role: userRole.ADMIN,
@@ -100,6 +104,7 @@ export class UsersService {
         'User with this email or phone number already exists',
       );
     }
+    userDto.password = await bcrypt.hash('Doctor@123', 10)
     const createdUser = this.doctorRepo.create({
       ...userDto,
       role: userRole.DOCTOR,
@@ -143,12 +148,5 @@ export class UsersService {
     if (result?.affected === 0)
       throw new NotFoundException('User with this id does not exist');
     return { message: `${role} deleted successfully` };
-  }
-
-  async assignClinicToDoctor(userId: string) {
-    const user = await this.findUserById(userId, userRole.DOCTOR) as Doctor;
-  }
-  async assignClinicToReceptioniste(userId: string) {
-    const user = await this.findUserById(userId, userRole.RECEP) as Receptionist;
   }
 }
