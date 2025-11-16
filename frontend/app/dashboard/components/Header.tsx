@@ -10,7 +10,6 @@ import {
   LogOut,
   ChevronDown,
 } from "lucide-react";
-import { clearUser } from "@/app/lib/auth";
 
 interface AuthUser {
   email: string;
@@ -26,7 +25,7 @@ export default function Header() {
 
   // Initialize user from localStorage on first render
   const [isInitialized, setIsInitialized] = useState(false);
-  
+
   const initializeUser = () => {
     if (!isInitialized && typeof window !== "undefined") {
       const userStr = localStorage.getItem("user");
@@ -47,7 +46,6 @@ export default function Header() {
   }
 
   const handleLogout = () => {
-    clearUser();
     // Clear authentication cookie
     document.cookie = "authToken=; path=/; max-age=0";
     document.cookie = "sessionToken=; path=/; max-age=0";
@@ -117,15 +115,21 @@ export default function Header() {
               className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"
             >
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.name || "Dr. Admin"}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.name || "Dr. Admin"}
+                </p>
                 <p className="text-xs text-gray-500">{getRoleDisplay()}</p>
               </div>
-              <div className={`w-10 h-10 ${getRoleColor()} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+              <div
+                className={`w-10 h-10 ${getRoleColor()} rounded-full flex items-center justify-center text-white font-bold text-sm`}
+              >
                 {getInitials()}
               </div>
               <ChevronDown
                 size={16}
-                className={`transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                className={`transition-transform ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
               />
             </button>
 
@@ -134,7 +138,9 @@ export default function Header() {
               <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                 {/* User Info */}
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user?.name}
+                  </p>
                   <p className="text-xs text-gray-600 mt-1">{user?.email}</p>
                   {user?.clinic && (
                     <p className="text-xs text-gray-500 mt-1">{user.clinic}</p>
