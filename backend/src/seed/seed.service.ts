@@ -10,6 +10,8 @@ import { Clinique } from '../clinique/entities/clinique.entity';
 import { ClinicService } from '../clinicservices/entities/clinicservice.entity';
 import { Rdv, rdvStatus } from '../rdv/entities/rdv.entity';
 import { userRole } from '../users/entities/user.entity';
+import { Facturation, FacturationStatus } from '../facturation/entities/facturation.entity';
+import { Payment, PaymentMethod, PaymentStatus } from '../payment/entities/payment.entity';
 
 @Injectable()
 export class SeedService {
@@ -28,6 +30,10 @@ export class SeedService {
         private clinicServiceRepository: Repository<ClinicService>,
         @InjectRepository(Rdv)
         private rdvRepository: Repository<Rdv>,
+        @InjectRepository(Facturation)
+        private facturationRepository: Repository<Facturation>,
+        @InjectRepository(Payment)
+        private paymentRepository: Repository<Payment>,
     ) { }
 
     async seed() {
@@ -43,7 +49,8 @@ export class SeedService {
         const receptionists = await this.seedReceptionists(clinics);
         const patients = await this.seedPatients();
         await this.seedClinicServices(clinics);
-        await this.seedAppointments(clinics, doctors, patients, receptionists);
+        const appointments = await this.seedAppointments(clinics, doctors, patients, receptionists);
+        await this.seedFacturationsAndPayments(appointments, patients, clinics);
 
         console.log('✅ Database seeding completed successfully!');
     }
@@ -51,6 +58,8 @@ export class SeedService {
     private async clearDatabase() {
         console.log('🧹 Clearing existing data...');
         // Use query builder to truncate or delete all with proper conditions
+        await this.paymentRepository.createQueryBuilder().delete().execute();
+        await this.facturationRepository.createQueryBuilder().delete().execute();
         await this.rdvRepository.createQueryBuilder().delete().execute();
         await this.clinicServiceRepository.createQueryBuilder().delete().execute();
         await this.receptionistRepository.createQueryBuilder().delete().execute();
@@ -422,7 +431,7 @@ export class SeedService {
         doctors: Doctor[],
         patients: Patient[],
         receptionists: Receptionist[],
-    ) {
+    ): Promise<Rdv[]> {
         console.log('📅 Seeding appointments...');
 
         const today = new Date();
@@ -437,6 +446,11 @@ export class SeedService {
                 rdvDate: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
                 status: rdvStatus.COMPLETED,
                 amount: 50,
+                consultation: {
+                    examination: 'Examen cardiaque complet, auscultation pulmonaire, mesure de la pression artérielle (140/90)',
+                    diagnosis: 'Hypertension artérielle légère, anxiété',
+                    treatment: 'Repos, réduction du stress, suivi dans 1 mois. Prescription: Amlodipine 5mg 1x/jour',
+                },
             },
             {
                 patient: patients[1],
@@ -447,6 +461,11 @@ export class SeedService {
                 rdvDate: new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
                 status: rdvStatus.COMPLETED,
                 amount: 40,
+                consultation: {
+                    examination: 'Examen pédiatrique général, vérification du carnet de vaccination',
+                    diagnosis: 'Enfant en bonne santé, développement normal',
+                    treatment: 'Vaccination ROR (Rougeole-Oreillons-Rubéole) effectuée. Prochain rappel dans 6 mois',
+                },
             },
             {
                 patient: patients[2],
@@ -457,6 +476,11 @@ export class SeedService {
                 rdvDate: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
                 status: rdvStatus.COMPLETED,
                 amount: 80,
+                consultation: {
+                    examination: 'Examen dermatologique des zones affectées (bras, jambes), évaluation de la sévérité',
+                    diagnosis: 'Dermatite atopique (eczéma) modérée',
+                    treatment: 'Crème hydratante 2x/jour, Dermocorticoïde (Hydrocortisone 1%) pendant 7 jours, éviter les irritants',
+                },
             },
             // Today's appointments
             {
@@ -478,6 +502,11 @@ export class SeedService {
                 rdvDate: new Date(today.setHours(14, 30, 0, 0)),
                 status: rdvStatus.IN_PROGRESS,
                 amount: 90,
+                consultation: {
+                    examination: 'Examen orthopédique du genou droit, test de mobilité, palpation',
+                    diagnosis: 'Contusion du genou, pas de fracture détectée',
+                    treatment: 'Repos, application de glace, anti-inflammatoires (Ibuprofène 400mg 3x/jour pendant 5 jours)',
+                },
             },
             // Upcoming appointments
             {
@@ -532,13 +561,222 @@ export class SeedService {
             },
         ];
 
+        const appointments: Rdv[] = [];
         for (const rdvData of appointmentsData) {
             const rdv = this.rdvRepository.create({
                 ...rdvData,
                 createdBy: userRole.RECEP,
             });
-            await this.rdvRepository.save(rdv);
+            const savedRdv = await this.rdvRepository.save(rdv);
+            appointments.push(savedRdv);
             console.log(`✓ Appointment created: ${rdvData.patient.firstName} with Dr. ${rdvData.doctor.firstName} on ${rdvData.rdvDate.toLocaleDateString()}`);
+        }
+
+        return appointments;
+    }
+
+    private async seedFacturationsAndPayments(appointments: Rdv[], patients: Patient[], clinics: Clinique[]) {
+        console.log('💰 Seeding facturations and payments...');
+
+        const today = new Date();
+        let invoiceCounter = 1;
+
+        // Generate facturations for completed and in-progress appointments
+        const appointmentsWithFacturation = appointments.filter(
+            rdv => rdv.status === rdvStatus.COMPLETED || rdv.status === rdvStatus.IN_PROGRESS
+        );
+
+        for (const rdv of appointmentsWithFacturation) {
+            const invoiceNumber = `INV-${today.getFullYear()}-${String(invoiceCounter).padStart(5, '0')}`;
+            invoiceCounter++;
+
+            const totalAmount = rdv.amount;
+            const taxAmount = totalAmount * 0.19; // 19% TVA
+            const totalWithTax = totalAmount + taxAmount;
+
+            // Determine facturation status based on appointment
+            let status: FacturationStatus;
+            let paidAmount = 0;
+            const dueDate = new Date(rdv.rdvDate);
+            dueDate.setDate(dueDate.getDate() + 30); // Due in 30 days
+
+            if (rdv.status === rdvStatus.COMPLETED) {
+                // Some completed appointments are fully paid, some partially, some not paid
+                const paymentScenario = Math.random();
+                if (paymentScenario < 0.6) {
+                    status = FacturationStatus.PAID;
+                    paidAmount = totalWithTax;
+                } else if (paymentScenario < 0.8) {
+                    status = FacturationStatus.PARTIALLY_PAID;
+                    paidAmount = totalWithTax * 0.5; // 50% paid
+                } else {
+                    status = FacturationStatus.ISSUED;
+                    paidAmount = 0;
+                }
+            } else {
+                // In-progress appointments
+                status = FacturationStatus.DRAFT;
+                paidAmount = 0;
+            }
+
+            const facturation = this.facturationRepository.create({
+                invoiceNumber,
+                patient: rdv.patient,
+                clinique: rdv.clinique,
+                totalAmount: totalWithTax,
+                paidAmount,
+                taxAmount,
+                discountAmount: 0,
+                status,
+                dueDate,
+                description: `Consultation - ${rdv.reason}`,
+                rdv,
+            });
+
+            const savedFacturation = await this.facturationRepository.save(facturation);
+            console.log(`✓ Facturation created: ${invoiceNumber} - ${status} (${paidAmount}/${totalWithTax} TND)`);
+
+            // Create payments for paid and partially paid facturations
+            if (paidAmount > 0) {
+                await this.createPaymentsForFacturation(savedFacturation, paidAmount, rdv.rdvDate);
+            }
+        }
+
+        // Create some standalone facturations (not linked to appointments)
+        await this.createStandaloneFacturations(patients, clinics, today, invoiceCounter);
+    }
+
+    private async createPaymentsForFacturation(facturation: Facturation, totalPaid: number, baseDate: Date) {
+        const paymentMethods = [PaymentMethod.CASH, PaymentMethod.CREDIT_CARD, PaymentMethod.BANK_TRANSFER];
+        const isFullyPaid = totalPaid >= facturation.totalAmount;
+
+        if (isFullyPaid) {
+            // Single payment for full amount
+            const paymentMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+            const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+            const payment = this.paymentRepository.create({
+                transactionId,
+                facturation,
+                amount: totalPaid,
+                paymentMethod,
+                status: PaymentStatus.COMPLETED,
+                reference: `REF-${transactionId}`,
+                notes: 'Paiement complet lors de la consultation',
+                completedAt: new Date(baseDate.getTime() + 60 * 60 * 1000), // 1 hour after appointment
+            });
+
+            await this.paymentRepository.save(payment);
+            console.log(`  ✓ Payment created: ${transactionId} - ${totalPaid} TND (${paymentMethod})`);
+        } else {
+            // Partial payment - split into multiple payments
+            const firstPaymentAmount = totalPaid * 0.7; // 70% of partial payment
+            const secondPaymentAmount = totalPaid * 0.3; // 30% of partial payment
+
+            // First payment - cash
+            const transactionId1 = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            const payment1 = this.paymentRepository.create({
+                transactionId: transactionId1,
+                facturation,
+                amount: firstPaymentAmount,
+                paymentMethod: PaymentMethod.CASH,
+                status: PaymentStatus.COMPLETED,
+                reference: `REF-${transactionId1}`,
+                notes: 'Acompte en espèces',
+                completedAt: new Date(baseDate.getTime() + 60 * 60 * 1000), // 1 hour after
+            });
+
+            await this.paymentRepository.save(payment1);
+            console.log(`  ✓ Payment created: ${transactionId1} - ${firstPaymentAmount.toFixed(2)} TND (CASH)`);
+
+            // Second payment - credit card
+            const transactionId2 = `TXN-${Date.now() + 1}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            const payment2 = this.paymentRepository.create({
+                transactionId: transactionId2,
+                facturation,
+                amount: secondPaymentAmount,
+                paymentMethod: PaymentMethod.CREDIT_CARD,
+                status: PaymentStatus.COMPLETED,
+                reference: `REF-${transactionId2}`,
+                notes: 'Paiement complémentaire par carte',
+                completedAt: new Date(baseDate.getTime() + 24 * 60 * 60 * 1000), // 1 day after
+            });
+
+            await this.paymentRepository.save(payment2);
+            console.log(`  ✓ Payment created: ${transactionId2} - ${secondPaymentAmount.toFixed(2)} TND (CREDIT_CARD)`);
+        }
+    }
+
+    private async createStandaloneFacturations(patients: Patient[], clinics: Clinique[], today: Date, startCounter: number) {
+        console.log('📄 Creating standalone facturations...');
+
+        const standaloneFacturations = [
+            {
+                patient: patients[3],
+                clinique: clinics[0],
+                totalAmount: 250,
+                description: 'Échographie abdominale complète',
+                status: FacturationStatus.ISSUED,
+                dueDate: new Date(today.getTime() + 15 * 24 * 60 * 60 * 1000),
+            },
+            {
+                patient: patients[5],
+                clinique: clinics[2],
+                totalAmount: 450,
+                description: 'Analyses sanguines complètes + échographie',
+                status: FacturationStatus.PAID,
+                dueDate: new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000),
+                paidAmount: 450,
+            },
+            {
+                patient: patients[6],
+                clinique: clinics[1],
+                totalAmount: 180,
+                description: 'Radiographie thoracique + consultation',
+                status: FacturationStatus.OVERDUE,
+                dueDate: new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000),
+            },
+        ];
+
+        for (let i = 0; i < standaloneFacturations.length; i++) {
+            const data = standaloneFacturations[i];
+            const invoiceNumber = `INV-${today.getFullYear()}-${String(startCounter + i).padStart(5, '0')}`;
+            const taxAmount = data.totalAmount * 0.19;
+            const totalWithTax = data.totalAmount + taxAmount;
+
+            const facturation = this.facturationRepository.create({
+                invoiceNumber,
+                patient: data.patient,
+                clinique: data.clinique,
+                totalAmount: totalWithTax,
+                paidAmount: data.paidAmount || 0,
+                taxAmount,
+                discountAmount: 0,
+                status: data.status,
+                dueDate: data.dueDate,
+                description: data.description,
+            });
+
+            const savedFacturation = await this.facturationRepository.save(facturation);
+            console.log(`✓ Standalone facturation created: ${invoiceNumber} - ${data.status}`);
+
+            // Create payment if paid
+            if (data.paidAmount && data.paidAmount > 0) {
+                const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+                const payment = this.paymentRepository.create({
+                    transactionId,
+                    facturation: savedFacturation,
+                    amount: data.paidAmount,
+                    paymentMethod: PaymentMethod.BANK_TRANSFER,
+                    status: PaymentStatus.COMPLETED,
+                    reference: `REF-${transactionId}`,
+                    notes: 'Virement bancaire',
+                    completedAt: new Date(data.dueDate.getTime() - 2 * 24 * 60 * 60 * 1000),
+                });
+
+                await this.paymentRepository.save(payment);
+                console.log(`  ✓ Payment created for standalone facturation: ${data.paidAmount} TND`);
+            }
         }
     }
 }
