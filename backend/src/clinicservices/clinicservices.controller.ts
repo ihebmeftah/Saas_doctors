@@ -3,9 +3,9 @@ import { ClinicServicesService } from './clinicservices.service';
 import { CreateClinicServiceDto } from './dto/create-clinicservice.dto';
 import { UpdateClinicServiceDto } from './dto/update-clinicservice.dto';
 
-@Controller('clinic-services')
+@Controller('clinicservices')
 export class ClinicServicesController {
-    constructor(private readonly clinicServicesService: ClinicServicesService) {}
+    constructor(private readonly clinicServicesService: ClinicServicesService) { }
 
     @Post()
     create(@Body() createClinicServiceDto: CreateClinicServiceDto) {

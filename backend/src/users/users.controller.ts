@@ -6,6 +6,7 @@ import {
     Param,
     ParseEnumPipe,
     ParseUUIDPipe,
+    Patch,
     Post,
     Query,
     UseGuards,
@@ -56,6 +57,15 @@ export class UsersController {
     @Roles(userRole.SUPER_ADMIN, userRole.ADMIN)
     createDoctor(@Body() userDto: CreateUserDto) {
         return this.usersService.createDoctor(userDto);
+    }
+
+    @Patch(':role/:id')
+    updateUser(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Param('role', new ParseEnumPipe(userRole)) role: userRole,
+        @Body() updateDto: Partial<CreateUserDto>,
+    ) {
+        return this.usersService.updateUser(id, role, updateDto);
     }
 
     @Delete(':role/:id')

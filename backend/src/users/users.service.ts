@@ -137,6 +137,44 @@ export class UsersService {
       throw new NotFoundException(`${role} with this id does not exist`);
     return user;
   }
+  async updateUser(id: string, role: userRole, updateDto: Partial<CreateUserDto>) {
+    const user = await this.findUserById(id, role);
+
+    // Check for conflicts if email or phone is being updated
+    if (updateDto.email && updateDto.email !== user.email) {
+      const emailExists = await this.findByEmailCheck(updateDto.email);
+      if (emailExists) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+
+    if (updateDto.password) {
+      updateDto.password = await bcrypt.hash(updateDto.password, 10);
+    }
+
+    Object.assign(user, updateDto);
+
+    let savedUser;
+    if (role === userRole.ADMIN || role === userRole.SUPER_ADMIN)
+      savedUser = await this.adminRepo.save(user as Admin);
+    if (role === userRole.RECEP)
+      savedUser = await this.recepRepo.save(user as Receptionist);
+    if (role === userRole.PATIENT)
+      savedUser = await this.patientRepo.save(user as Patient);
+    if (role === userRole.DOCTOR)
+      savedUser = await this.doctorRepo.save(user as Doctor);
+
+    return savedUser;
+  }
+
+  async findByEmailCheck(email: string) {
+    let user = await this.adminRepo.findOne({ where: { email } });
+    user ??= await this.recepRepo.findOne({ where: { email } });
+    user ??= await this.patientRepo.findOne({ where: { email } });
+    user ??= await this.doctorRepo.findOne({ where: { email } });
+    return user;
+  }
+
   async deleteUserById(id: string, role: userRole) {
     await this.findUserById(id, role);
     let result;
