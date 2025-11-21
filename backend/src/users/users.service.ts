@@ -179,12 +179,41 @@ export class UsersService {
     await this.findUserById(id, role);
     let result;
     if (role === userRole.ADMIN || userRole.SUPER_ADMIN)
-      result = await this.adminRepo.delete(id);
-    if (role === userRole.RECEP) result = await this.recepRepo.delete(id);
-    if (role === userRole.PATIENT) result = await this.patientRepo.delete(id);
-    if (role === userRole.DOCTOR) result = await this.doctorRepo.delete(id);
+      result = await this.adminRepo.softDelete(id);
+    if (role === userRole.RECEP) result = await this.recepRepo.softDelete(id);
+    if (role === userRole.PATIENT) result = await this.patientRepo.softDelete(id);
+    if (role === userRole.DOCTOR) result = await this.doctorRepo.softDelete(id);
     if (result?.affected === 0)
       throw new NotFoundException('User with this id does not exist');
     return { message: `${role} deleted successfully` };
+  }
+  async restoreDeletedUser(id: string, role: userRole) {
+    let result;
+    if (role === userRole.ADMIN || userRole.SUPER_ADMIN)
+      result = await this.adminRepo.restore(id);
+    if (role === userRole.RECEP) result = await this.recepRepo.restore(id);
+    if (role === userRole.PATIENT) result = await this.patientRepo.restore(id);
+    if (role === userRole.DOCTOR) result = await this.doctorRepo.restore(id);
+    if (result?.affected === 0)
+      throw new NotFoundException('User with this id does not exist');
+    return { message: `${role} restored successfully` };
+  }
+
+  async getDeletedUsers(role?: userRole, ids?: string[]) {
+    const where = {
+      where: ids && { id: In(ids) },
+      withDeleted: true,
+    };
+    if (role === userRole.ADMIN || role === userRole.SUPER_ADMIN)
+      return this.adminRepo.find(where);
+    if (role === userRole.RECEP) return this.recepRepo.find({ ...where, relations: { clinique: true } });
+    if (role === userRole.PATIENT) return this.patientRepo.find(where);
+    if (role === userRole.DOCTOR) return this.doctorRepo.find({ ...where, relations: { clinique: true } });
+    return [
+      ...(await this.adminRepo.find(where)),
+      ...(await this.recepRepo.find({ ...where, relations: { clinique: true } })),
+      ...(await this.patientRepo.find(where)),
+      ...(await this.doctorRepo.find({ ...where, relations: { clinique: true } })),
+    ];
   }
 }

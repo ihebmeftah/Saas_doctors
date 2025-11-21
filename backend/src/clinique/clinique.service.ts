@@ -73,6 +73,14 @@ export class CliniqueService {
 
   async remove(id: string) {
     const clinic = await this.findOne(id);
-    return this.cliniqueRepository.delete(id);
+    return this.cliniqueRepository.softDelete(id);
+  }
+
+  async restore(id: string) {
+    return this.cliniqueRepository.restore(id);
+  }
+
+  showDeltedClincs() {
+    return this.cliniqueRepository.find({ withDeleted: true });
   }
 }

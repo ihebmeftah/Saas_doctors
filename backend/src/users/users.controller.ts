@@ -15,8 +15,6 @@ import { UsersService } from './users.service';
 
 import { CreateUserDto } from './dto/create-user';
 import { userRole } from './entities/user.entity';
-import { JwtAuthGuard } from 'src/auth/guard/auth.guard';
-import { RolesGuard } from 'src/shared/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 
 @Controller('users')
@@ -27,6 +25,12 @@ export class UsersController {
     getUsers(@Query('role') role?: userRole) {
         return this.usersService.getUsers(role);
     }
+
+    @Get("delete")
+    getDeletedUsers(@Query('role') role?: userRole) {
+        return this.usersService.getDeletedUsers(role);
+    }
+
     @Get(':role/:id')
     findUserById(
         @Param('id', ParseUUIDPipe) id: string,
@@ -74,5 +78,13 @@ export class UsersController {
         @Param('role', new ParseEnumPipe(userRole)) role: userRole,
     ) {
         return this.usersService.deleteUserById(id, role);
+    }
+
+    @Patch('restore/:role/:id')
+    restoreUserById(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Param('role', new ParseEnumPipe(userRole)) role: userRole,
+    ) {
+        return this.usersService.restoreDeletedUser(id, role);
     }
 }

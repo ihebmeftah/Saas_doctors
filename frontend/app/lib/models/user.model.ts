@@ -15,6 +15,7 @@ export interface User {
     role: UserRole;
     createdAt?: string;
     updatedAt?: string;
+    deletedAt?: string | null;
     // Doctor specific
     speciality?: string;
     // Doctor and Receptionist

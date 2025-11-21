@@ -28,6 +28,10 @@ export class CliniqueController {
   findAll() {
     return this.cliniqueService.findAll();
   }
+  @Get('deleted')
+  findDeletedClinics() {
+    return this.cliniqueService.showDeltedClincs();
+  }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -57,5 +61,10 @@ export class CliniqueController {
     return this.cliniqueService.remove(id);
   }
 
-
+  @Patch('restore/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(userRole.SUPER_ADMIN, userRole.ADMIN)
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cliniqueService.restore(id);
+  }
 }

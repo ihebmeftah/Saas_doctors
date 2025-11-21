@@ -9,19 +9,28 @@ import {
   roleColors,
 } from "@/lib/models/user.model";
 import UserModal from "@/lib/components/UserModal";
+import EditUserModal from "@/lib/components/EditUserModal";
+import ConfirmDeleteModal from "@/lib/components/ConfirmDeleteModal";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole | "all">("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [showDeleted]);
 
   useEffect(() => {
     if (selectedRole === "all") {
@@ -31,10 +40,20 @@ export default function UsersPage() {
     }
   }, [selectedRole, users]);
 
+  // Auto-hide success message after 3 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const data = await userService.getAll();
+      const data = showDeleted
+        ? await userService.getDeleted()
+        : await userService.getAll();
       setUsers(data);
       setFilteredUsers(data);
     } catch (err) {
@@ -48,6 +67,69 @@ export default function UsersPage() {
   const handleUserClick = (user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setUserToEdit(user);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateUser = async (
+    id: string,
+    role: UserRole,
+    data: Partial<{
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      password?: string;
+      phone?: string;
+      speciality?: string;
+    }>
+  ) => {
+    try {
+      await userService.update(id, role, data);
+      setSuccessMessage("User updated successfully!");
+      await fetchUsers();
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      throw new Error(error.response?.data?.message || "Failed to update user");
+    }
+  };
+
+  const handleDeleteClick = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      await userService.delete(userToDelete.id, userToDelete.role);
+      setSuccessMessage("User deleted successfully!");
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      setIsModalOpen(false);
+      setSelectedUser(null);
+      await fetchUsers();
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Failed to delete user");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleRestoreUser = async (user: User) => {
+    try {
+      await userService.restore(user.id, user.role);
+      setSuccessMessage("User restored successfully!");
+      await fetchUsers();
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || "Failed to restore user");
+    }
   };
 
   const getRoleBadgeColor = (role: UserRole) => {
@@ -84,6 +166,46 @@ export default function UsersPage() {
 
   return (
     <div className="p-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <svg
+              className="w-5 h-5 text-green-600 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <p className="text-green-800">{successMessage}</p>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-green-600 hover:text-green-800"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Users Management</h1>
@@ -92,46 +214,56 @@ export default function UsersPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">
-            Filter by role:
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">
+              Filter by role:
+            </span>
 
-          <button
-            onClick={() => setSelectedRole("all")}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-              selectedRole === "all"
-                ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            All ({users.length})
-          </button>
+            <button
+              onClick={() => setSelectedRole("all")}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                selectedRole === "all"
+                  ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              All ({users.length})
+            </button>
 
-          {Object.values(UserRole).map((role) => {
-            const count = users.filter((u) => u.role === role).length;
-            const color = roleColors[role];
-            const activeClass =
-              selectedRole === role
-                ? `bg-${color}-600 text-white shadow-md`
-                : `bg-${color}-100 text-${color}-800 hover:bg-${color}-200`;
+            {Object.values(UserRole).map((role) => {
+              const count = users.filter((u) => u.role === role).length;
 
-            return (
-              <button
-                key={role}
-                onClick={() => setSelectedRole(role)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                  selectedRole === role
-                    ? getRoleBadgeColor(role)
-                        .replace("100", "600")
-                        .replace("800", "white") + " shadow-md"
-                    : getRoleBadgeColor(role) + " hover:opacity-80"
-                }`}
-              >
-                {roleLabels[role]} ({count})
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={role}
+                  onClick={() => setSelectedRole(role)}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                    selectedRole === role
+                      ? getRoleBadgeColor(role)
+                          .replace("100", "600")
+                          .replace("800", "white") + " shadow-md"
+                      : getRoleBadgeColor(role) + " hover:opacity-80"
+                  }`}
+                >
+                  {roleLabels[role]} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Show Deleted Checkbox */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => setShowDeleted(e.target.checked)}
+              className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Show Deleted Users
+            </span>
+          </label>
         </div>
       </div>
 
@@ -190,27 +322,62 @@ export default function UsersPage() {
                 {filteredUsers.map((user) => (
                   <tr
                     key={user.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    className={`transition-colors cursor-pointer ${
+                      user.deletedAt
+                        ? "bg-gray-50 opacity-60 hover:opacity-75"
+                        : "hover:bg-gray-50"
+                    }`}
                     onClick={() => handleUserClick(user)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        <div
+                          className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                            user.deletedAt
+                              ? "bg-gradient-to-br from-gray-400 to-gray-500"
+                              : "bg-gradient-to-br from-blue-500 to-cyan-500"
+                          }`}
+                        >
                           {user.firstName[0]}
                           {user.lastName[0]}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`text-sm font-medium ${
+                                user.deletedAt
+                                  ? "text-gray-600"
+                                  : "text-gray-900"
+                              }`}
+                            >
+                              {user.firstName} {user.lastName}
+                            </div>
+                            {user.deletedAt && (
+                              <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-semibold rounded">
+                                Deleted
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.email}</div>
+                      <div
+                        className={`text-sm ${
+                          user.deletedAt ? "text-gray-600" : "text-gray-900"
+                        }`}
+                      >
+                        {user.email}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.phone}</div>
+                      <div
+                        className={`text-sm ${
+                          user.deletedAt ? "text-gray-600" : "text-gray-900"
+                        }`}
+                      >
+                        {user.phone}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -248,15 +415,40 @@ export default function UsersPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUserClick(user);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
-                      >
-                        View Details
-                      </button>
+                      {showDeleted && user.deletedAt ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRestoreUser(user);
+                          }}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          Restore
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUserClick(user);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 transition-colors"
+                        >
+                          View Details
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -274,6 +466,32 @@ export default function UsersPage() {
           setIsModalOpen(false);
           setSelectedUser(null);
         }}
+        onEdit={handleEditUser}
+        onDelete={handleDeleteClick}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        user={userToEdit}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setUserToEdit(null);
+        }}
+        onSubmit={handleUpdateUser}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setUserToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.firstName} ${userToDelete?.lastName}? This action cannot be undone.`}
+        loading={deleteLoading}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { User } from './auth.model';
+import { User } from './user.model';
 import { ClinicService } from './clinique-services.model';
 
 // Zod schemas for validation
@@ -21,6 +21,7 @@ export interface Clinique {
     email: string;
     createdAt?: string;
     updatedAt?: string;
+    deletedAt?: string | null;
     addedby?: {
         id: string;
         email: string;
