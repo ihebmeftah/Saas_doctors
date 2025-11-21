@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { cliniqueService } from "@/lib/services/clinique.service";
-import { Clinique } from "@/lib/models/clinique.model";
+import { Clinique, CreateCliniqueFormData } from "@/lib/models/clinique.model";
 import Link from "next/link";
+import CreateEditCliniqueModal from "@/lib/components/CreateEditCliniqueModal";
 
 export default function CliniquesPage() {
   const [cliniques, setCliniques] = useState<Clinique[]>([]);
@@ -11,6 +12,9 @@ export default function CliniquesPage() {
   const [error, setError] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [cliniqueToEdit, setCliniqueToEdit] = useState<Clinique | null>(null);
 
   useEffect(() => {
     fetchCliniques();
@@ -48,6 +52,41 @@ export default function CliniquesPage() {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || "Failed to restore clinique");
     }
+  };
+
+  const handleCreateClinique = async (data: CreateCliniqueFormData) => {
+    try {
+      await cliniqueService.create(data);
+      setSuccessMessage("Clinique created successfully!");
+      await fetchCliniques();
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      throw new Error(
+        error.response?.data?.message || "Failed to create clinique"
+      );
+    }
+  };
+
+  const handleUpdateClinique = async (data: CreateCliniqueFormData) => {
+    if (!cliniqueToEdit) return;
+    try {
+      await cliniqueService.update(cliniqueToEdit.id, data);
+      setSuccessMessage("Clinique updated successfully!");
+      setCliniqueToEdit(null);
+      await fetchCliniques();
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      throw new Error(
+        error.response?.data?.message || "Failed to update clinique"
+      );
+    }
+  };
+
+  const handleEditClick = (e: React.MouseEvent, clinique: Clinique) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCliniqueToEdit(clinique);
+    setIsEditModalOpen(true);
   };
 
   if (loading) {
@@ -131,7 +170,10 @@ export default function CliniquesPage() {
               Show Deleted
             </span>
           </label>
-          <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg flex items-center">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg flex items-center"
+          >
             <svg
               className="w-5 h-5 mr-2"
               fill="none"
@@ -309,19 +351,40 @@ export default function CliniquesPage() {
                       />
                     </svg>
                   </div>
-                  <svg
-                    className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleEditClick(e, clinique)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit clinique"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
+                    </button>
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
                 </div>
 
                 <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
@@ -391,6 +454,24 @@ export default function CliniquesPage() {
           )}
         </div>
       )}
+
+      {/* Create Clinique Modal */}
+      <CreateEditCliniqueModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateClinique}
+      />
+
+      {/* Edit Clinique Modal */}
+      <CreateEditCliniqueModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setCliniqueToEdit(null);
+        }}
+        onSubmit={handleUpdateClinique}
+        clinique={cliniqueToEdit}
+      />
     </div>
   );
 }

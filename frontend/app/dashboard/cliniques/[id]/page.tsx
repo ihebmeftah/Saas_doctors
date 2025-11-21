@@ -10,8 +10,8 @@ import { ClinicService } from "@/lib/models/clinique-services.model";
 import DoctorsListModal from "@/lib/components/DoctorsListModal";
 import ReceptionistsListModal from "@/lib/components/ReceptionistsListModal";
 import ServicesListModal from "@/lib/components/ServicesListModal";
-import AddUserModal from "@/lib/components/AddUserModal";
-import AddServiceModal from "@/lib/components/AddServiceModal";
+import CreateEditUserModal from "@/lib/components/CreateEditUserModal";
+import CreateEditServiceModal from "@/lib/components/CreateEditServiceModal";
 import ConfirmDeleteModal from "@/lib/components/ConfirmDeleteModal";
 import AssignUserModal from "@/lib/components/AssignUserModal";
 
@@ -580,23 +580,21 @@ export default function CliniqueDetailPage() {
         onDelete={handleDeleteService}
       />
 
-      <AddUserModal
+      <CreateEditUserModal
         isOpen={showAddDoctorModal}
         onClose={() => setShowAddDoctorModal(false)}
         onSubmit={handleCreateUser}
         defaultRole="doctor"
-        cliniqueId={clinique.id}
       />
 
-      <AddUserModal
+      <CreateEditUserModal
         isOpen={showAddReceptionistModal}
         onClose={() => setShowAddReceptionistModal(false)}
         onSubmit={handleCreateUser}
         defaultRole="receptionist"
-        cliniqueId={clinique.id}
       />
 
-      <AddServiceModal
+      <CreateEditServiceModal
         isOpen={showAddServiceModal}
         onClose={() => setShowAddServiceModal(false)}
         onSubmit={handleCreateService}

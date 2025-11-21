@@ -9,7 +9,7 @@ import {
   roleColors,
 } from "@/lib/models/user.model";
 import UserModal from "@/lib/components/UserModal";
-import EditUserModal from "@/lib/components/EditUserModal";
+import CreateEditUserModal from "@/lib/components/CreateEditUserModal";
 import ConfirmDeleteModal from "@/lib/components/ConfirmDeleteModal";
 
 export default function UsersPage() {
@@ -75,8 +75,6 @@ export default function UsersPage() {
   };
 
   const handleUpdateUser = async (
-    id: string,
-    role: UserRole,
     data: Partial<{
       firstName?: string;
       lastName?: string;
@@ -86,8 +84,10 @@ export default function UsersPage() {
       speciality?: string;
     }>
   ) => {
+    if (!userToEdit) return;
+
     try {
-      await userService.update(id, role, data);
+      await userService.update(userToEdit.id, userToEdit.role, data);
       setSuccessMessage("User updated successfully!");
       await fetchUsers();
     } catch (err) {
@@ -471,7 +471,7 @@ export default function UsersPage() {
       />
 
       {/* Edit User Modal */}
-      <EditUserModal
+      <CreateEditUserModal
         user={userToEdit}
         isOpen={isEditModalOpen}
         onClose={() => {
@@ -479,6 +479,9 @@ export default function UsersPage() {
           setUserToEdit(null);
         }}
         onSubmit={handleUpdateUser}
+        defaultRole={
+          userToEdit?.role === UserRole.DOCTOR ? "doctor" : "receptionist"
+        }
       />
 
       {/* Delete Confirmation Modal */}
