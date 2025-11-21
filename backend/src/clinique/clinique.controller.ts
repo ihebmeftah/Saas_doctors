@@ -11,12 +11,12 @@ import { CreateCliniqueDto } from './dto/create-clinique.dto';
 import { AssignUserCliniqueDto } from './dto/assignuser-clinique.dto';
 
 @Controller('clinique')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class CliniqueController {
   constructor(private readonly cliniqueService: CliniqueService) { }
 
   @Post()
   @Roles(userRole.SUPER_ADMIN, userRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   create(
     @Body() createCliniqueDto: CreateCliniqueDto,
     @CurrUser() user: LoggedUser,
@@ -25,12 +25,7 @@ export class CliniqueController {
   }
 
   @Get()
-  findAll(
-    @CurrUser() user: LoggedUser,
-  ) {
-    if (user.role === userRole.ADMIN) {
-      return this.cliniqueService.findAdminCreatedClinics(user.id);
-    }
+  findAll() {
     return this.cliniqueService.findAll();
   }
 
@@ -39,6 +34,7 @@ export class CliniqueController {
     return this.cliniqueService.findOne(id);
   }
   @Patch("assign-user")
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(userRole.SUPER_ADMIN, userRole.ADMIN)
   assignUserToClinic(
     @Body() assignUserCliniqueDto: AssignUserCliniqueDto,
@@ -48,12 +44,14 @@ export class CliniqueController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(userRole.SUPER_ADMIN, userRole.ADMIN)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateCliniqueDto: UpdateCliniqueDto) {
     return this.cliniqueService.update(id, updateCliniqueDto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(userRole.SUPER_ADMIN, userRole.ADMIN)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.cliniqueService.remove(id);

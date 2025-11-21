@@ -38,7 +38,7 @@ export class CliniqueService {
   async findOne(id: string) {
     const clinic = await this.cliniqueRepository.findOne({
       where: { id },
-      relations: { doctors: true, receptionists: true },
+      relations: { doctors: true, receptionists: true, services: true },
     });
     if (!clinic) throw new NotFoundException("Clinique not found");
     return clinic;
