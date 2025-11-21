@@ -23,6 +23,8 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createUserRole, setCreateUserRole] = useState<'doctor' | 'receptionist'>('doctor');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -72,6 +74,31 @@ export default function UsersPage() {
   const handleEditUser = (user: User) => {
     setUserToEdit(user);
     setIsEditModalOpen(true);
+  };
+
+  const handleCreateUser = async (
+    data: Partial<{
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      password?: string;
+      phone?: string;
+      role?: string;
+      speciality?: string;
+    }>
+  ) => {
+    try {
+      if (createUserRole === 'doctor') {
+        await userService.createDoctor(data as any);
+      } else {
+        await userService.createReceptionist(data as any);
+      }
+      setSuccessMessage(`${createUserRole === 'doctor' ? 'Doctor' : 'Receptionist'} created successfully!`);
+      await fetchUsers();
+    } catch (err) {
+      const error = err as { response?: { data?: { message?: string } } };
+      throw new Error(error.response?.data?.message || "Failed to create user");
+    }
   };
 
   const handleUpdateUser = async (
@@ -207,9 +234,57 @@ export default function UsersPage() {
       )}
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Users Management</h1>
-        <p className="text-gray-600 mt-1">Manage all system users</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Users Management</h1>
+          <p className="text-gray-600 mt-1">Manage all system users</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setCreateUserRole('doctor');
+              setIsCreateModalOpen(true);
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Doctor
+          </button>
+          <button
+            onClick={() => {
+              setCreateUserRole('receptionist');
+              setIsCreateModalOpen(true);
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Receptionist
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -468,6 +543,14 @@ export default function UsersPage() {
         }}
         onEdit={handleEditUser}
         onDelete={handleDeleteClick}
+      />
+
+      {/* Create User Modal */}
+      <CreateEditUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateUser}
+        defaultRole={createUserRole}
       />
 
       {/* Edit User Modal */}
