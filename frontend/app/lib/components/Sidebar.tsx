@@ -178,7 +178,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const isActive =
-                pathname === item.href || pathname.startsWith(item.href + "/");
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.name}
