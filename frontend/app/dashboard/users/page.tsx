@@ -24,7 +24,9 @@ export default function UsersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createUserRole, setCreateUserRole] = useState<'doctor' | 'receptionist'>('doctor');
+  const [createUserRole, setCreateUserRole] = useState<
+    "doctor" | "receptionist"
+  >("doctor");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -88,12 +90,16 @@ export default function UsersPage() {
     }>
   ) => {
     try {
-      if (createUserRole === 'doctor') {
+      if (createUserRole === "doctor") {
         await userService.createDoctor(data as any);
       } else {
         await userService.createReceptionist(data as any);
       }
-      setSuccessMessage(`${createUserRole === 'doctor' ? 'Doctor' : 'Receptionist'} created successfully!`);
+      setSuccessMessage(
+        `${
+          createUserRole === "doctor" ? "Doctor" : "Receptionist"
+        } created successfully!`
+      );
       await fetchUsers();
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
@@ -242,7 +248,7 @@ export default function UsersPage() {
         <div className="flex gap-2">
           <button
             onClick={() => {
-              setCreateUserRole('doctor');
+              setCreateUserRole("doctor");
               setIsCreateModalOpen(true);
             }}
             className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
@@ -264,7 +270,7 @@ export default function UsersPage() {
           </button>
           <button
             onClick={() => {
-              setCreateUserRole('receptionist');
+              setCreateUserRole("receptionist");
               setIsCreateModalOpen(true);
             }}
             className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
