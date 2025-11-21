@@ -33,9 +33,9 @@ export class UsersService {
     if (role === userRole.DOCTOR) return this.doctorRepo.find({ ...where, relations: { clinique: true } });
     return [
       ...(await this.adminRepo.find(where)),
-      ...(await this.recepRepo.find(where)),
+      ...(await this.recepRepo.find({ ...where, relations: { clinique: true } })),
       ...(await this.patientRepo.find(where)),
-      ...(await this.doctorRepo.find(where)),
+      ...(await this.doctorRepo.find({ ...where, relations: { clinique: true } })),
     ];
   }
   async createReceptionist(userDto: CreateUserDto) {
