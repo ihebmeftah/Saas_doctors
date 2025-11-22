@@ -30,6 +30,14 @@ export class RdvService {
     });
   }
 
+  async getPatientAppointments(patientId: string) {
+    return await this.rdvRepository.find({
+      where: { patient: { id: patientId } },
+      relations: { doctor: true, patient: true, clinique: true, receptionist: true },
+      order: { rdvDate: 'DESC' },
+    });
+  }
+
   async createRdv(createRdvDto: CreateRdvDto, user: LoggedUser) {
     const clinic = await this.clinicSer.findOne(createRdvDto.cliniqueId);
     const patient = await this.usersService.findUserById(createRdvDto.patientId, userRole.PATIENT);

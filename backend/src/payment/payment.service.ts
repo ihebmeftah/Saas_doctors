@@ -15,7 +15,7 @@ export class PaymentService {
         @InjectRepository(Facturation)
         private readonly facturatationRepository: Repository<Facturation>,
         private readonly facturatationService: FacturationService,
-    ) {}
+    ) { }
 
     async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
         const facturation = await this.facturatationService.findOne(createPaymentDto.facturatationId);
@@ -197,6 +197,16 @@ export class PaymentService {
             .createQueryBuilder('payment')
             .leftJoinAndSelect('payment.facturation', 'facturation')
             .where('facturation.rdv.id = :rdvId', { rdvId })
+            .orderBy('payment.createdAt', 'DESC')
+            .getMany();
+    }
+
+    async getPatientPayments(patientId: string): Promise<Payment[]> {
+        return this.paymentRepository
+            .createQueryBuilder('payment')
+            .leftJoinAndSelect('payment.facturation', 'facturation')
+            .leftJoinAndSelect('facturation.patient', 'patient')
+            .where('patient.id = :patientId', { patientId })
             .orderBy('payment.createdAt', 'DESC')
             .getMany();
     }

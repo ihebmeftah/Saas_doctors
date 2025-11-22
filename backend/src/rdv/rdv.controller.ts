@@ -20,6 +20,12 @@ export class RdvController {
     return this.rdvService.findAll();
   }
 
+  @Get('my-appointments')
+  @Roles(userRole.PATIENT)
+  getMyAppointments(@CurrUser() user: LoggedUser) {
+    return this.rdvService.getPatientAppointments(user.id);
+  }
+
   @Post()
   @Roles(userRole.RECEP, userRole.PATIENT)
   createRdv(@Body() createRdvDto: CreateRdvDto, @CurrUser() user: LoggedUser) {
