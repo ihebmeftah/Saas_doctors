@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/contexts/auth.context";
 import Sidebar from "@/lib/components/Sidebar";
 import DashboardHeader from "@/lib/components/DashboardHeader";
 
@@ -10,6 +12,34 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        // Not logged in, redirect to login
+        router.push("/login");
+      } else if (user.role === "patient") {
+        // Patients should use the portal, not dashboard
+        router.push("/portal");
+      }
+    }
+  }, [user, loading, router]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard for patients or unauthenticated users
+  if (!user || user.role === "patient") {
+    return null;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">

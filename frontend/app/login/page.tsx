@@ -11,7 +11,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push("/dashboard");
+      // Redirect based on user role
+      if (user.role === "patient") {
+        router.push("/portal");
+      } else {
+        router.push("/dashboard");
+      }
     }
   }, [user, loading, router]);
 
