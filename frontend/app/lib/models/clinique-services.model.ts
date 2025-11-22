@@ -4,4 +4,11 @@ export interface ClinicService {
     description: string;
     price: number;
     durationMinutes: number;
+    clinique?: {
+        id: string;
+        name: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+    };
 }
