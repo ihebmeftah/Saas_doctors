@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/contexts/auth.context";
+import { UserRole } from "@/lib/models/user.model";
 import { rdvService, ChangeStatusDto } from "@/lib/services/rdv.service";
 import { Rdv, RdvStatus } from "@/lib/models/rdv.model";
 import ConsultationModal from "@/lib/components/ConsultationModal";
+import CreateEditAppointment from "@/lib/components/CreateEditAppointment";
+import AppointmentDetailsModal from "@/lib/components/AppointmentDetailsModal";
 
 interface CalendarDay {
   date: Date;
@@ -28,6 +32,7 @@ const statusLabels: Record<RdvStatus, string> = {
 };
 
 export default function CalendarPage() {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<Rdv[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -37,6 +42,16 @@ export default function CalendarPage() {
     null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  const isReceptionist = user?.role === UserRole.RECEP;
+  const isDoctor = user?.role === UserRole.DOCTOR;
+
+  // Get active appointment from local state for restriction checks
+  const activeAppointment = isDoctor
+    ? appointments.find((apt) => apt.status === RdvStatus.IN_PROGRESS)
+    : null;
 
   useEffect(() => {
     loadAppointments();
@@ -45,7 +60,9 @@ export default function CalendarPage() {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      const data = await rdvService.getDoctorAppointments();
+      const data = isReceptionist
+        ? await rdvService.getReceptionistAppointments()
+        : await rdvService.getDoctorAppointments();
       setAppointments(data);
     } catch (error) {
       console.error("Failed to load appointments:", error);
@@ -71,15 +88,23 @@ export default function CalendarPage() {
       d <= endDate;
       d.setDate(d.getDate() + 1)
     ) {
-      const dateStr = d.toISOString().split("T")[0];
+      // Use local timezone for date comparison to avoid date shift
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+
       const dayAppointments = appointments.filter((apt) => {
-        const aptDate = new Date(apt.rdvDate).toISOString().split("T")[0];
-        return aptDate === dateStr;
+        const aptDate = new Date(apt.rdvDate);
+        return (
+          aptDate.getFullYear() === year &&
+          aptDate.getMonth() === month &&
+          aptDate.getDate() === day
+        );
       });
 
       days.push({
         date: new Date(d),
-        isCurrentMonth: d.getMonth() === month,
+        isCurrentMonth: d.getMonth() === currentDate.getMonth(),
         appointments: dayAppointments,
       });
     }
@@ -133,6 +158,26 @@ export default function CalendarPage() {
   };
 
   const handleStatusChange = async (appointment: Rdv, newStatus: RdvStatus) => {
+    // For doctors: prevent starting new appointment or cancelling when one is in progress
+    if (
+      isDoctor &&
+      activeAppointment &&
+      activeAppointment.id !== appointment.id
+    ) {
+      if (newStatus === RdvStatus.IN_PROGRESS) {
+        alert(
+          `You cannot start a new appointment while "${activeAppointment.patient.firstName} ${activeAppointment.patient.lastName}" appointment is in progress. Please complete the current appointment first.`
+        );
+        return;
+      }
+      if (newStatus === RdvStatus.CANCELLED) {
+        alert(
+          `You cannot cancel appointments while an appointment is in progress. Please complete the current appointment first.`
+        );
+        return;
+      }
+    }
+
     if (newStatus === RdvStatus.COMPLETED) {
       setSelectedAppointment(appointment);
       setShowConsultationModal(true);
@@ -265,7 +310,12 @@ export default function CalendarPage() {
             {calendarDays.map((day, index) => (
               <div
                 key={index}
-                onClick={() => setSelectedDay(day.date)}
+                onClick={() => {
+                  setSelectedDay(day.date);
+                  if (isReceptionist) {
+                    setShowCreateModal(true);
+                  }
+                }}
                 className={`
                   min-h-[80px] p-2 border rounded-lg cursor-pointer transition-all
                   ${
@@ -293,7 +343,12 @@ export default function CalendarPage() {
                     {day.appointments.slice(0, 2).map((apt, i) => (
                       <div
                         key={i}
-                        className={`text-xs px-1 py-0.5 rounded truncate ${
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedAppointment(apt);
+                          setShowDetailsModal(true);
+                        }}
+                        className={`text-xs px-1 py-0.5 rounded truncate hover:opacity-80 transition-opacity ${
                           statusColors[apt.status]
                         }`}
                       >
@@ -322,7 +377,11 @@ export default function CalendarPage() {
               upcomingAppointments.map((apt) => (
                 <div
                   key={apt.id}
-                  className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                  className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => {
+                    setSelectedAppointment(apt);
+                    setShowDetailsModal(true);
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
@@ -348,50 +407,55 @@ export default function CalendarPage() {
                     <span className="font-medium">Reason:</span> {apt.reason}
                   </p>
 
-                  {/* Status Change Buttons */}
-                  <div className="flex flex-wrap gap-2">
-                    {apt.status === RdvStatus.PENDING && (
-                      <button
-                        onClick={() =>
-                          handleStatusChange(apt, RdvStatus.SCHEDULED)
-                        }
-                        className="text-xs px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                      >
-                        Schedule
-                      </button>
-                    )}
-                    {apt.status === RdvStatus.SCHEDULED && (
-                      <button
-                        onClick={() =>
-                          handleStatusChange(apt, RdvStatus.IN_PROGRESS)
-                        }
-                        className="text-xs px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-                      >
-                        Start
-                      </button>
-                    )}
-                    {apt.status === RdvStatus.IN_PROGRESS && (
-                      <button
-                        onClick={() =>
-                          handleStatusChange(apt, RdvStatus.COMPLETED)
-                        }
-                        className="text-xs px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                      >
-                        Complete
-                      </button>
-                    )}
-                    {apt.status !== RdvStatus.CANCELLED &&
-                      apt.status !== RdvStatus.COMPLETED && (
+                  {/* Status Change Buttons - Only for Doctors */}
+                  {!isReceptionist && (
+                    <div
+                      className="flex flex-wrap gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {apt.status === RdvStatus.PENDING && (
                         <button
                           onClick={() =>
-                            handleStatusChange(apt, RdvStatus.CANCELLED)
+                            handleStatusChange(apt, RdvStatus.SCHEDULED)
                           }
-                          className="text-xs px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                          className="text-xs px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                         >
-                          Cancel
+                          Schedule
                         </button>
                       )}
-                  </div>
+                      {apt.status === RdvStatus.SCHEDULED && (
+                        <button
+                          onClick={() =>
+                            handleStatusChange(apt, RdvStatus.IN_PROGRESS)
+                          }
+                          className="text-xs px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                        >
+                          Start
+                        </button>
+                      )}
+                      {apt.status === RdvStatus.IN_PROGRESS && (
+                        <button
+                          onClick={() =>
+                            handleStatusChange(apt, RdvStatus.COMPLETED)
+                          }
+                          className="text-xs px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          Complete
+                        </button>
+                      )}
+                      {apt.status !== RdvStatus.CANCELLED &&
+                        apt.status !== RdvStatus.COMPLETED && (
+                          <button
+                            onClick={() =>
+                              handleStatusChange(apt, RdvStatus.CANCELLED)
+                            }
+                            className="text-xs px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -403,8 +467,8 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Consultation Modal */}
-      {selectedAppointment && (
+      {/* Consultation Modal - Only for Doctors */}
+      {!isReceptionist && selectedAppointment && (
         <ConsultationModal
           isOpen={showConsultationModal}
           onClose={() => {
@@ -416,6 +480,32 @@ export default function CalendarPage() {
           isSubmitting={isSubmitting}
         />
       )}
+
+      {/* Create Appointment Modal - Only for Receptionists */}
+      {isReceptionist && (
+        <CreateEditAppointment
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            setSelectedDay(null);
+          }}
+          selectedDate={selectedDay}
+          onSubmit={async (data) => {
+            await rdvService.create(data);
+            await loadAppointments();
+          }}
+        />
+      )}
+
+      {/* Appointment Details Modal */}
+      <AppointmentDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedAppointment(null);
+        }}
+        appointment={selectedAppointment}
+      />
     </div>
   );
 }

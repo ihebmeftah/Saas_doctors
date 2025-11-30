@@ -11,6 +11,7 @@ import { Patient } from './entities/patient.entity';
 import { Admin } from './entities/admin.entity';
 import { Receptionist } from './entities/receptioniste.entity';
 import { userRole } from './entities/user.entity';
+import { Rdv } from 'src/rdv/entities/rdv.entity';
 import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
@@ -21,6 +22,7 @@ export class UsersService {
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
     @InjectRepository(Doctor) private readonly doctorRepo: Repository<Doctor>,
+    @InjectRepository(Rdv) private readonly rdvRepo: Repository<Rdv>,
   ) { }
   async getUsers(role?: userRole, ids?: string[]) {
     const where = {
@@ -114,9 +116,9 @@ export class UsersService {
   }
   async findByEmail(email: string) {
     let user = await this.adminRepo.findOne({ where: { email } });
-    user ??= await this.recepRepo.findOne({ where: { email } });
+    user ??= await this.recepRepo.findOne({ where: { email }, relations: { clinique: true } });
     user ??= await this.patientRepo.findOne({ where: { email } });
-    user ??= await this.doctorRepo.findOne({ where: { email } });
+    user ??= await this.doctorRepo.findOne({ where: { email }, relations: { clinique: true } });
     if (!user) {
       throw new NotFoundException(`User with this email does not exist`);
     }
@@ -222,6 +224,21 @@ export class UsersService {
       where: { clinique: { id: clinicId } },
       relations: { clinique: true },
     });
+  }
+
+  async getPatientsByClinic(clinicId: string) {
+    // Get all patients who have appointments in this clinic
+    const rdvs = await this.rdvRepo.find({
+      where: { clinique: { id: clinicId } },
+      relations: ['patient'],
+    });
+
+    // Extract unique patients
+    const uniquePatients = Array.from(
+      new Map(rdvs.map(rdv => [rdv.patient.id, rdv.patient])).values()
+    );
+
+    return uniquePatients;
   }
 
   async getPatients() {

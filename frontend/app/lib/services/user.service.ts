@@ -71,6 +71,11 @@ class UserService {
         return response.data;
     }
 
+    async getPatientsByClinic(clinicId: string): Promise<User[]> {
+        const response = await apiService.getApi().get<User[]>(`/users/patients-by-clinic/${clinicId}`);
+        return response.data;
+    }
+
     async getPatients(): Promise<User[]> {
         const response = await apiService.getApi().get<User[]>('/users/patients');
         return response.data;

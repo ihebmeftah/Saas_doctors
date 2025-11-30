@@ -12,10 +12,14 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guard/auth.guard';
 import { CurrUser } from 'src/shared/decorators/loggeduser.decorator';
 import type { LoggedUser } from './strategy/jwt.strategy';
+import { UsersService } from 'src/users/users.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) { }
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
@@ -29,7 +33,8 @@ export class AuthController {
 
   @Get('curr')
   @UseGuards(JwtAuthGuard)
-  getCurrentUser(@CurrUser() currUser: LoggedUser) {
-    return currUser;
+  async getCurrentUser(@CurrUser() currUser: LoggedUser) {
+    // Fetch full user details with relations (like clinique)
+    return this.usersService.findUserById(currUser.id, currUser.role);
   }
 }

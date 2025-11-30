@@ -6,9 +6,10 @@ import { Patient } from "./entities/patient.entity";
 import { Admin } from "./entities/admin.entity";
 import { Receptionist } from "./entities/receptioniste.entity"; import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
+import { Rdv } from 'src/rdv/entities/rdv.entity';
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Patient, Doctor, Receptionist, Admin])
+    TypeOrmModule.forFeature([Patient, Doctor, Receptionist, Admin, Rdv])
   ],
   providers: [
     UsersService,

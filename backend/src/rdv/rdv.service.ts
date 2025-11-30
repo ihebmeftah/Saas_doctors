@@ -39,12 +39,9 @@ export class RdvService {
   }
 
   async getDoctorAppointments(doctorId: string) {
-    const start = moment().startOf('month').toDate();
-    const end = moment().endOf('month').toDate();
     return await this.rdvRepository.find({
       where: {
         doctor: { id: doctorId },
-        rdvDate: Between(start, end),
       },
       relations: { doctor: true, patient: true, clinique: true, receptionist: true },
       order: { rdvDate: 'ASC' },
@@ -112,15 +109,11 @@ export class RdvService {
   }
 
   async getReceptionistAppointments(receptionistId: string) {
-    const startOfDay = moment().startOf('day').toDate();
-    const endOfWeek = moment().add(7, 'days').endOf('day').toDate();
-
     const receptionist = await this.usersService.findUserById(receptionistId, userRole.RECEP) as any;
 
     return await this.rdvRepository.find({
       where: {
         clinique: { id: receptionist.clinique.id },
-        rdvDate: Between(startOfDay, endOfWeek),
       },
       relations: { doctor: true, patient: true, clinique: true, receptionist: true },
       order: { rdvDate: 'ASC' },

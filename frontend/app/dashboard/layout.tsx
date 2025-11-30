@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/auth.context";
+import { ActiveAppointmentProvider } from "@/lib/contexts/active-appointment.context";
 import Sidebar from "@/lib/components/Sidebar";
 import DashboardHeader from "@/lib/components/DashboardHeader";
+import ActiveAppointmentIndicator from "@/lib/components/ActiveAppointmentIndicator";
 
 export default function DashboardLayout({
   children,
@@ -42,14 +44,19 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <ActiveAppointmentProvider>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-        <DashboardHeader onMenuClick={() => setSidebarOpen(true)} />
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+          <DashboardHeader onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+          {/* Global Active Appointment Indicator */}
+          <ActiveAppointmentIndicator />
+
+          <main className="flex-1 overflow-y-auto">{children}</main>
+        </div>
       </div>
-    </div>
+    </ActiveAppointmentProvider>
   );
 }

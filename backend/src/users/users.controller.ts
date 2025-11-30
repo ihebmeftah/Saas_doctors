@@ -36,6 +36,11 @@ export class UsersController {
         return this.usersService.getDoctorsByClinic(clinicId);
     }
 
+    @Get('patients-by-clinic/:clinicId')
+    getPatientsByClinic(@Param('clinicId', ParseUUIDPipe) clinicId: string) {
+        return this.usersService.getPatientsByClinic(clinicId);
+    }
+
     @Get('patients')
     getPatients() {
         return this.usersService.getPatients();

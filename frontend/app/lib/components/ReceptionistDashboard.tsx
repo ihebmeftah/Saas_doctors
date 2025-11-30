@@ -6,7 +6,6 @@ import { userService } from "@/lib/services/user.service";
 import { useAuth } from "@/lib/contexts/auth.context";
 import { Rdv, RdvStatus } from "@/lib/models/rdv.model";
 import { User } from "@/lib/models/user.model";
-import CreateAppointmentModal from "./CreateAppointmentModal";
 import CreateEditUserModal from "./CreateEditUserModal";
 
 const statusColors: Record<RdvStatus, string> = {
@@ -28,10 +27,7 @@ const statusLabels: Record<RdvStatus, string> = {
 export default function ReceptionistDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Rdv[]>([]);
-  const [doctors, setDoctors] = useState<User[]>([]);
-  const [patients, setPatients] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showPatientModal, setShowPatientModal] = useState(false);
 
   useEffect(() => {
@@ -42,21 +38,16 @@ export default function ReceptionistDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [appointmentsData, patientsData] = await Promise.all([
+      const [appointmentsData] = await Promise.all([
         rdvService.getReceptionistAppointments(),
-        userService.getPatients(),
       ]);
       setAppointments(appointmentsData);
-      setPatients(patientsData);
 
       // Load doctors if user has a clinic
       const userWithClinic: User & { clinique?: { id: string; name: string } } =
         user as User & { clinique?: { id: string; name: string } };
       if (userWithClinic?.clinique?.id) {
-        const doctorsData = await userService.getDoctorsByClinic(
-          userWithClinic.clinique.id
-        );
-        setDoctors(doctorsData);
+        await userService.getDoctorsByClinic(userWithClinic.clinique.id);
       }
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -153,10 +144,7 @@ export default function ReceptionistDashboard() {
             </svg>
             New Patient
           </button>
-          <button
-            onClick={() => setShowAppointmentModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -367,22 +355,6 @@ export default function ReceptionistDashboard() {
           )}
         </div>
       </div>
-
-      {/* Modals */}
-      {(user as User & { clinique?: { id: string; name: string } })
-        ?.clinique && (
-        <CreateAppointmentModal
-          isOpen={showAppointmentModal}
-          onClose={() => setShowAppointmentModal(false)}
-          clinicId={
-            (user as User & { clinique?: { id: string; name: string } })
-              .clinique!.id
-          }
-          doctors={doctors}
-          patients={patients}
-          onSuccess={loadData}
-        />
-      )}
 
       <CreateEditUserModal
         isOpen={showPatientModal}
