@@ -427,7 +427,7 @@ export default function DoctorDashboard() {
       {todayStats && todayStats.appointments.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Today&apos;s Appointments
+            Today&apos;s
           </h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
