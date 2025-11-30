@@ -158,6 +158,18 @@ export default function CalendarPage() {
   };
 
   const handleStatusChange = async (appointment: Rdv, newStatus: RdvStatus) => {
+    // For doctors: prevent canceling the in-progress appointment
+    if (
+      isDoctor &&
+      appointment.status === RdvStatus.IN_PROGRESS &&
+      newStatus === RdvStatus.CANCELLED
+    ) {
+      alert(
+        "You cannot cancel an appointment that is currently in progress. Please complete it first."
+      );
+      return;
+    }
+
     // For doctors: prevent starting new appointment or cancelling when one is in progress
     if (
       isDoctor &&
