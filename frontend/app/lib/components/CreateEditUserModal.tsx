@@ -17,6 +17,10 @@ const userSchema = z.object({
     .or(z.literal("")),
   phone: z.string().min(8, "Phone number is required"),
   speciality: z.string().optional(),
+  age: z.string().optional(),
+  cin: z.string().optional(),
+  gender: z.string().optional(),
+  address: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -33,9 +37,13 @@ interface CreateEditUserModalProps {
       phone?: string;
       role?: string;
       speciality?: string;
+      age?: string;
+      cin?: string;
+      gender?: string;
+      address?: string;
     }>
   ) => Promise<void>;
-  defaultRole: "doctor" | "receptionist";
+  defaultRole: "doctor" | "receptionist" | "patient";
   user?: User | null;
 }
 
@@ -67,6 +75,10 @@ export default function CreateEditUserModal({
           phone: user.phone.toString(),
           speciality: user.speciality || "",
           password: "",
+          age: (user as any).age?.toString() || "",
+          cin: (user as any).cin || "",
+          gender: (user as any).gender || "",
+          address: (user as any).address || "",
         });
       } else {
         reset({
@@ -76,6 +88,10 @@ export default function CreateEditUserModal({
           password: "",
           phone: "",
           speciality: "",
+          age: "",
+          cin: "",
+          gender: "",
+          address: "",
         });
       }
     }
@@ -123,13 +139,31 @@ export default function CreateEditUserModal({
 
   if (!isOpen) return null;
 
-  const roleColor = defaultRole === "doctor" ? "blue" : "green";
+  const roleColor =
+    defaultRole === "doctor"
+      ? "blue"
+      : defaultRole === "patient"
+      ? "purple"
+      : "green";
   const gradientClass =
     defaultRole === "doctor"
       ? "from-blue-600 to-cyan-600"
+      : defaultRole === "patient"
+      ? "from-purple-600 to-pink-600"
       : "from-green-600 to-emerald-600";
   const textClass =
-    defaultRole === "doctor" ? "text-blue-100" : "text-green-100";
+    defaultRole === "doctor"
+      ? "text-blue-100"
+      : defaultRole === "patient"
+      ? "text-purple-100"
+      : "text-green-100";
+
+  const roleLabel =
+    defaultRole === "doctor"
+      ? "Doctor"
+      : defaultRole === "patient"
+      ? "Patient"
+      : "Receptionist";
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -149,13 +183,7 @@ export default function CreateEditUserModal({
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold">
-                  {isEditMode
-                    ? `Edit ${
-                        defaultRole === "doctor" ? "Doctor" : "Receptionist"
-                      }`
-                    : `Add ${
-                        defaultRole === "doctor" ? "Doctor" : "Receptionist"
-                      }`}
+                  {isEditMode ? `Edit ${roleLabel}` : `Add ${roleLabel}`}
                 </h2>
                 <p className={`${textClass} mt-1`}>
                   {isEditMode
@@ -337,6 +365,106 @@ export default function CreateEditUserModal({
                     </p>
                   )}
                 </div>
+              )}
+
+              {/* Patient-specific fields */}
+              {defaultRole === "patient" && (
+                <>
+                  {/* Age and Gender */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="age"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Age
+                      </label>
+                      <input
+                        {...register("age")}
+                        type="number"
+                        id="age"
+                        min="0"
+                        max="150"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors text-gray-900 placeholder:text-gray-400"
+                        placeholder="25"
+                      />
+                      {errors.age && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.age.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="gender"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Gender
+                      </label>
+                      <select
+                        {...register("gender")}
+                        id="gender"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors text-gray-900"
+                      >
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {errors.gender && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.gender.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* CIN and Address */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="cin"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        CIN
+                      </label>
+                      <input
+                        {...register("cin")}
+                        type="text"
+                        id="cin"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors text-gray-900 placeholder:text-gray-400"
+                        placeholder="12345678"
+                      />
+                      {errors.cin && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.cin.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="address"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Address
+                      </label>
+                      <input
+                        {...register("address")}
+                        type="text"
+                        id="address"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors text-gray-900 placeholder:text-gray-400"
+                        placeholder="123 Main St, City"
+                      />
+                      {errors.address && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.address.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 

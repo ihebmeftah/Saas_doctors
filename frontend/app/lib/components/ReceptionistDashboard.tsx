@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/contexts/auth.context";
 import { Rdv, RdvStatus } from "@/lib/models/rdv.model";
 import { User } from "@/lib/models/user.model";
 import CreateAppointmentModal from "./CreateAppointmentModal";
-import CreatePatientModal from "./CreatePatientModal";
+import CreateEditUserModal from "./CreateEditUserModal";
 
 const statusColors: Record<RdvStatus, string> = {
   [RdvStatus.PENDING]: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -384,10 +384,24 @@ export default function ReceptionistDashboard() {
         />
       )}
 
-      <CreatePatientModal
+      <CreateEditUserModal
         isOpen={showPatientModal}
         onClose={() => setShowPatientModal(false)}
-        onSuccess={loadData}
+        defaultRole="patient"
+        onSubmit={async (data) => {
+          await userService.createPatient({
+            firstName: data.firstName!,
+            lastName: data.lastName!,
+            email: data.email!,
+            password: data.password || "Patient@123",
+            phone: data.phone!,
+            age: data.age ? parseInt(data.age) : undefined,
+            gender: data.gender || undefined,
+            address: data.address || undefined,
+            cin: data.cin || undefined,
+          });
+          await loadData();
+        }}
       />
     </div>
   );

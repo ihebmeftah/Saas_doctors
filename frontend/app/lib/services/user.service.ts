@@ -23,7 +23,7 @@ export interface CreatePatientDto {
     lastName: string;
     email: string;
     password: string;
-    phone: string;
+    phone: string | number;
     age?: number;
     gender?: string;
     address?: string;
