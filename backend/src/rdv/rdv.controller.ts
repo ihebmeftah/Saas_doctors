@@ -26,6 +26,30 @@ export class RdvController {
     return this.rdvService.getPatientAppointments(user.id);
   }
 
+  @Get('doctor-appointments')
+  @Roles(userRole.DOCTOR)
+  getDoctorAppointments(@CurrUser() user: LoggedUser) {
+    return this.rdvService.getDoctorAppointments(user.id);
+  }
+
+  @Get('doctor-stats')
+  @Roles(userRole.DOCTOR)
+  getDoctorStats(@CurrUser() user: LoggedUser) {
+    return this.rdvService.getDoctorTodayStats(user.id);
+  }
+
+  @Get('doctor-patients')
+  @Roles(userRole.DOCTOR)
+  getDoctorPatients(@CurrUser() user: LoggedUser) {
+    return this.rdvService.getDoctorPatients(user.id);
+  }
+
+  @Get('receptionist-appointments')
+  @Roles(userRole.RECEP)
+  getReceptionistAppointments(@CurrUser() user: LoggedUser) {
+    return this.rdvService.getReceptionistAppointments(user.id);
+  }
+
   @Post()
   @Roles(userRole.RECEP, userRole.PATIENT)
   createRdv(@Body() createRdvDto: CreateRdvDto, @CurrUser() user: LoggedUser) {

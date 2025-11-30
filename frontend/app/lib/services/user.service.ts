@@ -18,6 +18,18 @@ export interface CreateReceptionistDto {
     phone: string;
 }
 
+export interface CreatePatientDto {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone: string;
+    age?: number;
+    gender?: string;
+    address?: string;
+    cin?: string;
+}
+
 export interface UpdateUserDto {
     firstName?: string;
     lastName?: string;
@@ -46,6 +58,21 @@ class UserService {
 
     async createReceptionist(data: CreateReceptionistDto): Promise<User> {
         const response = await apiService.getApi().post<User>('/users/create-recep', data);
+        return response.data;
+    }
+
+    async createPatient(data: CreatePatientDto): Promise<User> {
+        const response = await apiService.getApi().post<User>('/users/create-patient', data);
+        return response.data;
+    }
+
+    async getDoctorsByClinic(clinicId: string): Promise<User[]> {
+        const response = await apiService.getApi().get<User[]>(`/users/doctors-by-clinic/${clinicId}`);
+        return response.data;
+    }
+
+    async getPatients(): Promise<User[]> {
+        const response = await apiService.getApi().get<User[]>('/users/patients');
         return response.data;
     }
 

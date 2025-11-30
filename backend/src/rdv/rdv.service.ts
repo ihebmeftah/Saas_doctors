@@ -38,6 +38,95 @@ export class RdvService {
     });
   }
 
+  async getDoctorAppointments(doctorId: string) {
+    const start = moment().startOf('month').toDate();
+    const end = moment().endOf('month').toDate();
+    return await this.rdvRepository.find({
+      where: {
+        doctor: { id: doctorId },
+        rdvDate: Between(start, end),
+      },
+      relations: { doctor: true, patient: true, clinique: true, receptionist: true },
+      order: { rdvDate: 'ASC' },
+    });
+  }
+
+  async getDoctorTodayStats(doctorId: string) {
+    const startOfDay = moment().startOf('day').toDate();
+    const endOfDay = moment().endOf('day').toDate();
+
+    const appointments = await this.rdvRepository.find({
+      where: {
+        doctor: { id: doctorId },
+        rdvDate: Between(startOfDay, endOfDay),
+      },
+      relations: { patient: true },
+    });
+
+    const total = appointments.length;
+    const completed = appointments.filter(apt => apt.status === rdvStatus.COMPLETED).length;
+    const pending = appointments.filter(apt => apt.status === rdvStatus.PENDING).length;
+    const scheduled = appointments.filter(apt => apt.status === rdvStatus.SCHEDULED).length;
+    const inProgress = appointments.filter(apt => apt.status === rdvStatus.IN_PROGRESS).length;
+    const cancelled = appointments.filter(apt => apt.status === rdvStatus.CANCELLED).length;
+
+    return {
+      total,
+      completed,
+      pending,
+      scheduled,
+      inProgress,
+      cancelled,
+      appointments,
+    };
+  }
+
+  async getDoctorPatients(doctorId: string) {
+    const completedAppointments = await this.rdvRepository.find({
+      where: {
+        doctor: { id: doctorId },
+        status: rdvStatus.COMPLETED,
+      },
+      relations: { patient: true, clinique: true },
+      order: { rdvDate: 'DESC' },
+    });
+
+    // Group by patient and get unique patients with their latest consultation
+    const patientsMap = new Map();
+    completedAppointments.forEach((apt) => {
+      if (!patientsMap.has(apt.patient.id)) {
+        patientsMap.set(apt.patient.id, {
+          patient: apt.patient,
+          lastConsultation: apt.rdvDate,
+          totalConsultations: 1,
+          lastDiagnosis: apt.consultation?.diagnosis,
+          lastTreatment: apt.consultation?.treatment,
+        });
+      } else {
+        const existing = patientsMap.get(apt.patient.id);
+        existing.totalConsultations += 1;
+      }
+    });
+
+    return Array.from(patientsMap.values());
+  }
+
+  async getReceptionistAppointments(receptionistId: string) {
+    const startOfDay = moment().startOf('day').toDate();
+    const endOfWeek = moment().add(7, 'days').endOf('day').toDate();
+
+    const receptionist = await this.usersService.findUserById(receptionistId, userRole.RECEP) as any;
+
+    return await this.rdvRepository.find({
+      where: {
+        clinique: { id: receptionist.clinique.id },
+        rdvDate: Between(startOfDay, endOfWeek),
+      },
+      relations: { doctor: true, patient: true, clinique: true, receptionist: true },
+      order: { rdvDate: 'ASC' },
+    });
+  }
+
   async createRdv(createRdvDto: CreateRdvDto, user: LoggedUser) {
     const clinic = await this.clinicSer.findOne(createRdvDto.cliniqueId);
     const patient = await this.usersService.findUserById(createRdvDto.patientId, userRole.PATIENT);

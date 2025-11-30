@@ -31,6 +31,16 @@ export class UsersController {
         return this.usersService.getDeletedUsers(role);
     }
 
+    @Get('doctors-by-clinic/:clinicId')
+    getDoctorsByClinic(@Param('clinicId', ParseUUIDPipe) clinicId: string) {
+        return this.usersService.getDoctorsByClinic(clinicId);
+    }
+
+    @Get('patients')
+    getPatients() {
+        return this.usersService.getPatients();
+    }
+
     @Get(':role/:id')
     findUserById(
         @Param('id', ParseUUIDPipe) id: string,

@@ -216,4 +216,17 @@ export class UsersService {
       ...(await this.doctorRepo.find({ ...where, relations: { clinique: true } })),
     ];
   }
+
+  async getDoctorsByClinic(clinicId: string) {
+    return await this.doctorRepo.find({
+      where: { clinique: { id: clinicId } },
+      relations: { clinique: true },
+    });
+  }
+
+  async getPatients() {
+    return await this.patientRepo.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
 }
