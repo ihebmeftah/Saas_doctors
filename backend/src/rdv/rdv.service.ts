@@ -115,7 +115,7 @@ export class RdvService {
       where: {
         clinique: { id: receptionist.clinique.id },
       },
-      relations: { doctor: true, patient: true, clinique: true, receptionist: true },
+      relations: { doctor: true, patient: true, clinique: true, receptionist: true, facturation: true },
       order: { rdvDate: 'ASC' },
     });
   }

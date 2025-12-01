@@ -563,9 +563,12 @@ export class SeedService {
 
         const appointments: Rdv[] = [];
         for (const rdvData of appointmentsData) {
+            const { consultation, ...rdvDataWithoutConsultation } = rdvData;
+
             const rdv = this.rdvRepository.create({
-                ...rdvData,
+                ...rdvDataWithoutConsultation,
                 createdBy: userRole.RECEP,
+                consultation: consultation || undefined,
             });
             const savedRdv = await this.rdvRepository.save(rdv);
             appointments.push(savedRdv);

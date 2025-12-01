@@ -22,6 +22,18 @@ export class FacturationController {
         return this.facturatationService.getPatientInvoices(user.id);
     }
 
+    @Get('receptionist/invoices')
+    @Roles(userRole.RECEP)
+    async getReceptionistInvoices(@CurrUser() user: LoggedUser) {
+        return this.facturatationService.getReceptionistInvoices(user.id);
+    }
+
+    @Get('receptionist/completed-appointments')
+    @Roles(userRole.RECEP)
+    async getCompletedAppointmentsWithoutInvoice(@CurrUser() user: LoggedUser) {
+        return this.facturatationService.getCompletedAppointmentsWithoutInvoice(user.id);
+    }
+
     @Post()
     @Roles(userRole.RECEP)
     create(@Body() createFacturationDto: CreateFacturationDto) {
@@ -62,16 +74,16 @@ export class FacturationController {
         return this.facturatationService.getOverdueInvoices();
     }
 
-    @Get('rdv/:rdvId')
-    @Roles(userRole.RECEP, userRole.ADMIN)
-    getInvoiceByRdv(@Param('rdvId') rdvId: string) {
-        return this.facturatationService.getInvoiceByRdv(rdvId);
-    }
-
     @Get('rdv/all/list')
     @Roles(userRole.RECEP, userRole.ADMIN)
     getRdvInvoices() {
         return this.facturatationService.getRdvInvoices();
+    }
+
+    @Get('rdv/:rdvId')
+    @Roles(userRole.RECEP, userRole.ADMIN)
+    getInvoiceByRdv(@Param('rdvId') rdvId: string) {
+        return this.facturatationService.getInvoiceByRdv(rdvId);
     }
 
     @Get(':id')

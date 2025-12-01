@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Rdv, RdvStatus } from "@/lib/models/rdv.model";
+import { CreateInvoiceModal } from "./CreateInvoiceModal";
+import { useAuth } from "@/lib/contexts/auth.context";
+import { UserRole } from "@/lib/models/user.model";
 
 interface AppointmentDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   appointment: Rdv | null;
+  onInvoiceCreated?: () => void;
 }
 
 const statusColors: Record<RdvStatus, string> = {
@@ -28,7 +33,12 @@ export default function AppointmentDetailsModal({
   isOpen,
   onClose,
   appointment,
+  onInvoiceCreated,
 }: AppointmentDetailsModalProps) {
+  const { user } = useAuth();
+  const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  const isReceptionist = user?.role === UserRole.RECEP;
+
   if (!isOpen || !appointment) return null;
 
   const formatDate = (dateString: string) => {
@@ -241,14 +251,37 @@ export default function AppointmentDetailsModal({
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="w-full px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
+          <div className="flex gap-3">
+            {isReceptionist && appointment.status === RdvStatus.COMPLETED && (
+              <button
+                onClick={() => setShowCreateInvoice(true)}
+                className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Créer Facture
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="flex-1 px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Create Invoice Modal */}
+      {showCreateInvoice && appointment && (
+        <CreateInvoiceModal
+          appointment={appointment}
+          onClose={() => setShowCreateInvoice(false)}
+          onSuccess={() => {
+            setShowCreateInvoice(false);
+            onInvoiceCreated?.();
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 }

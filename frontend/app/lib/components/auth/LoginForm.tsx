@@ -247,19 +247,6 @@ export default function LoginForm() {
             )}
           </button>
         </form>
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600">
-            Don&apos;t have an account?{" "}
-            <a
-              href="/register"
-              className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all"
-            >
-              Sign up now
-            </a>
-          </p>
-        </div>
       </div>
     </div>
   );

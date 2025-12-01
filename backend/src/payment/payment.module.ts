@@ -8,11 +8,12 @@ import { FacturationService } from 'src/facturation/facturation.service';
 import { Patient } from 'src/users/entities/patient.entity';
 import { Clinique } from 'src/clinique/entities/clinique.entity';
 import { Rdv } from 'src/rdv/entities/rdv.entity';
+import { Receptionist } from 'src/users/entities/receptioniste.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Payment, Facturation, Patient, Clinique, Rdv])],
+    imports: [TypeOrmModule.forFeature([Payment, Facturation, Patient, Clinique, Rdv, Receptionist])],
     controllers: [PaymentController],
     providers: [PaymentService, FacturationService],
     exports: [PaymentService],
 })
-export class PaymentModule {}
+export class PaymentModule { }

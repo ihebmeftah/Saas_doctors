@@ -30,16 +30,38 @@ export class PaymentService {
             throw new BadRequestException(`Payment amount exceeds remaining balance of ${remainingAmount}`);
         }
 
-        const transactionId = await this.generateTransactionId();
+        const transactionId = createPaymentDto.transactionId || await this.generateTransactionId();
+
+        // Map payment method string to enum
+        const paymentMethodMap: { [key: string]: PaymentMethod } = {
+            'cash': PaymentMethod.CASH,
+            'card': PaymentMethod.CREDIT_CARD,
+            'credit_card': PaymentMethod.CREDIT_CARD,
+            'debit_card': PaymentMethod.DEBIT_CARD,
+            'check': PaymentMethod.CHECK,
+            'transfer': PaymentMethod.BANK_TRANSFER,
+            'bank_transfer': PaymentMethod.BANK_TRANSFER,
+        };
+
+        const paymentMethod = paymentMethodMap[createPaymentDto.paymentMethod.toLowerCase()] || PaymentMethod.CASH;
 
         const payment = this.paymentRepository.create({
-            ...createPaymentDto,
             transactionId,
             facturation,
-            status: PaymentStatus.PENDING,
+            amount: createPaymentDto.amount,
+            paymentMethod,
+            status: PaymentStatus.COMPLETED,
+            completedAt: new Date(),
+            reference: createPaymentDto.reference,
+            notes: createPaymentDto.notes,
         });
 
-        return this.paymentRepository.save(payment);
+        const savedPayment = await this.paymentRepository.save(payment);
+
+        // Update facturation paid amount and status
+        await this.facturatationService.updatePaidAmount(facturation.id, Number(createPaymentDto.amount));
+
+        return savedPayment;
     }
 
     async findAll(filters?: { status?: PaymentStatus; facturatationId?: string; paymentMethod?: PaymentMethod }): Promise<Payment[]> {

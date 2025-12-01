@@ -517,6 +517,7 @@ export default function CalendarPage() {
           setSelectedAppointment(null);
         }}
         appointment={selectedAppointment}
+        onInvoiceCreated={loadAppointments}
       />
     </div>
   );

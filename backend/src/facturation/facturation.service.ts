@@ -4,7 +4,8 @@ import { Repository, LessThanOrEqual } from 'typeorm';
 import { Facturation, FacturationStatus } from './entities/facturation.entity';
 import { Patient } from 'src/users/entities/patient.entity';
 import { Clinique } from 'src/clinique/entities/clinique.entity';
-import { Rdv } from 'src/rdv/entities/rdv.entity';
+import { Rdv, rdvStatus } from 'src/rdv/entities/rdv.entity';
+import { Receptionist } from 'src/users/entities/receptioniste.entity';
 import { CreateFacturationDto } from './dto/create-facturation.dto';
 import { UpdateFacturationDto } from './dto/update-facturation.dto';
 
@@ -19,7 +20,9 @@ export class FacturationService {
         private readonly cliniqueRepository: Repository<Clinique>,
         @InjectRepository(Rdv)
         private readonly rdvRepository: Repository<Rdv>,
-    ) {}
+        @InjectRepository(Receptionist)
+        private readonly receptionistRepository: Repository<Receptionist>,
+    ) { }
 
     async create(createFacturationDto: CreateFacturationDto): Promise<Facturation> {
         const patient = await this.patientRepository.findOne({
@@ -170,6 +173,56 @@ export class FacturationService {
 
     async getClinicInvoices(cliniqueId: string): Promise<Facturation[]> {
         return this.findAll({ cliniqueId });
+    }
+
+    async getReceptionistClinic(receptionistId: string): Promise<Receptionist> {
+        const receptionist = await this.receptionistRepository.findOne({
+            where: { id: receptionistId },
+            relations: ['clinique'],
+        });
+
+        if (!receptionist) {
+            throw new NotFoundException('Receptionist not found');
+        }
+
+        return receptionist;
+    }
+
+    async getReceptionistInvoices(receptionistId: string): Promise<Facturation[]> {
+        const receptionist = await this.getReceptionistClinic(receptionistId);
+
+        // Get only invoices for completed appointments with consultations in the receptionist's clinic
+        return this.facturatationRepository
+            .createQueryBuilder('facturation')
+            .leftJoinAndSelect('facturation.patient', 'patient')
+            .leftJoinAndSelect('facturation.clinique', 'clinique')
+            .leftJoinAndSelect('facturation.payments', 'payments')
+            .leftJoinAndSelect('facturation.rdv', 'rdv')
+            .where('facturation.clinique.id = :cliniqueId', { cliniqueId: receptionist.clinique.id })
+            .andWhere('rdv.status = :status', { status: rdvStatus.COMPLETED })
+            .andWhere('rdv.consultation IS NOT NULL')
+            .orderBy('facturation.createdAt', 'DESC')
+            .getMany();
+    }
+
+    async getCompletedAppointmentsWithoutInvoice(receptionistId: string): Promise<Rdv[]> {
+        const receptionist = await this.getReceptionistClinic(receptionistId);
+
+        // Get completed appointments with consultations that don't have invoices yet
+        const appointmentsWithInvoices = await this.rdvRepository
+            .createQueryBuilder('rdv')
+            .leftJoinAndSelect('rdv.patient', 'patient')
+            .leftJoinAndSelect('rdv.doctor', 'doctor')
+            .leftJoinAndSelect('rdv.clinique', 'clinique')
+            .leftJoin('facturation', 'facturation', 'facturation.rdv.id = rdv.id')
+            .where('rdv.clinique.id = :cliniqueId', { cliniqueId: receptionist.clinique.id })
+            .andWhere('rdv.status = :status', { status: rdvStatus.COMPLETED })
+            .andWhere('rdv.consultation IS NOT NULL')
+            .andWhere('facturation.id IS NULL')
+            .orderBy('rdv.rdvDate', 'DESC')
+            .getMany();
+
+        return appointmentsWithInvoices;
     }
 
     async getInvoiceByRdv(rdvId: string): Promise<Facturation> {

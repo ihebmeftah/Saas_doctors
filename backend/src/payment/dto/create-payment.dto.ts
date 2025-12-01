@@ -8,8 +8,12 @@ export class CreatePaymentDto {
     @IsNumber()
     amount: number;
 
-    @IsEnum(PaymentMethod)
-    paymentMethod: PaymentMethod;
+    @IsString()
+    paymentMethod: string;
+
+    @IsOptional()
+    @IsString()
+    transactionId?: string;
 
     @IsOptional()
     @IsString()

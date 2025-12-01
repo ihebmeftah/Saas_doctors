@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/auth.context";
 import { rdvService } from "@/lib/services/rdv.service";
 import { RdvStatus } from "@/lib/models/rdv.model";
+import { facturationService } from "@/lib/services/facturation.service";
+import { CreatePaymentModal } from "@/lib/components/CreatePaymentModal";
+import { Facturation } from "@/lib/models/facturation.model";
 import {
   Calendar,
   Clock,
@@ -17,6 +20,7 @@ import {
   AlertCircle,
   LayoutGrid,
   LayoutList,
+  DollarSign,
 } from "lucide-react";
 
 interface Patient {
@@ -44,6 +48,18 @@ interface Appointment {
   examination?: string;
   diagnosis?: string;
   treatment?: string;
+  amount?: number;
+  clinique?: {
+    id: string;
+    name: string;
+  };
+  facturation?: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+    totalAmount: number;
+    paidAmount: number;
+  };
 }
 
 export default function AppointmentsPage() {
@@ -60,6 +76,10 @@ export default function AppointmentsPage() {
   const [showTodayOnly, setShowTodayOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Facturation | null>(
+    null
+  );
+  const [loadingInvoice, setLoadingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -142,6 +162,58 @@ export default function AppointmentsPage() {
     } finally {
       setChangingStatus(null);
     }
+  };
+
+  const handleCreatePayment = async (appointmentId: string) => {
+    try {
+      setLoadingInvoice(appointmentId);
+
+      // Find the appointment to get its details
+      const appointment = appointments.find((apt) => apt.id === appointmentId);
+      if (!appointment) {
+        alert("Appointment not found");
+        return;
+      }
+
+      let invoice: Facturation;
+
+      // Check if invoice already exists
+      if (appointment.facturation) {
+        // Load full invoice details
+        invoice = await facturationService.getById(appointment.facturation.id);
+      } else {
+        // Create new invoice for this appointment
+        if (!appointment.clinique || !appointment.amount) {
+          alert("Missing clinic or amount information");
+          return;
+        }
+
+        const invoiceData = {
+          patientId: appointment.patient.id,
+          cliniqueId: appointment.clinique.id,
+          rdvId: appointment.id,
+          totalAmount: appointment.amount,
+          description: `Consultation - ${appointment.reason || "N/A"}`,
+        };
+
+        invoice = await facturationService.createInvoice(invoiceData);
+      }
+
+      setSelectedInvoice(invoice);
+    } catch (error: any) {
+      console.error("Failed to load/create invoice:", error);
+      alert(
+        error?.response?.data?.message ||
+          "Failed to load invoice for this appointment"
+      );
+    } finally {
+      setLoadingInvoice(null);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setSelectedInvoice(null);
+    router.push("/dashboard/facture");
   };
 
   const getStatusColor = (
@@ -537,6 +609,46 @@ export default function AppointmentsPage() {
                         {isChanging ? "Processing..." : "Cancel"}
                       </button>
                     )}
+                    {appointment.status === RdvStatus.COMPLETED && (
+                      <>
+                        {appointment.facturation ? (
+                          appointment.facturation.paidAmount >=
+                          appointment.facturation.totalAmount ? (
+                            <button
+                              disabled
+                              className="flex-1 px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed transition-all font-medium text-sm flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Fully Paid
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleCreatePayment(appointment.id)
+                              }
+                              disabled={loadingInvoice === appointment.id}
+                              className="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm flex items-center justify-center gap-2"
+                            >
+                              <DollarSign className="w-4 h-4" />
+                              {loadingInvoice === appointment.id
+                                ? "Loading..."
+                                : "Add Payment"}
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => handleCreatePayment(appointment.id)}
+                            disabled={loadingInvoice === appointment.id}
+                            className="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium text-sm flex items-center justify-center gap-2"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                            {loadingInvoice === appointment.id
+                              ? "Loading..."
+                              : "Create Payment"}
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -673,6 +785,15 @@ export default function AppointmentsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Payment Modal */}
+      {selectedInvoice && (
+        <CreatePaymentModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          onSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   );
